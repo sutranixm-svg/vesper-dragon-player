@@ -47,6 +47,13 @@ body{font-family:var(--font-ui),system-ui,sans-serif} button,input{font:inherit}
 @media(prefers-reduced-motion:reduce){.vinyl.spinning,.equalizer b{animation:none}.tonearm{transition:none}}
 
 /* Dragon edition: a cinematic backdrop behind the existing glass turntable. */
+.visualizer-panel{margin:0 0 10px;padding:5px 10px 0;border:1px solid #edc13224;border-radius:9px;background:linear-gradient(115deg,#05050466,#b8871709);overflow:hidden}
+.visualizer-heading{display:flex;justify-content:space-between;align-items:center;color:#c3aa65;font:8px var(--font-mono);letter-spacing:.12em}
+.visualizer-heading button{font-size:10px;color:#dbc071;letter-spacing:0}
+.audio-reactive-canvas{display:block;width:100%;height:80px;pointer-events:none}
+.turntable:has(.visualizer-panel) .deck{min-height:210px}
+.turntable:has(.visualizer-panel) .record-plinth{width:min(29vh,260px)}
+.workspace:has(.visualizer-panel){min-height:675px}
 .cinema-background{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;pointer-events:none}
 .cinema-shade{position:fixed;inset:0;background:linear-gradient(90deg,#0009 0%,#0004 48%,#0001 100%);pointer-events:none}
 .glass-panel{background:linear-gradient(140deg,#14130fc9,#09090965);backdrop-filter:blur(9px) saturate(.8);border-color:#e9c66328}

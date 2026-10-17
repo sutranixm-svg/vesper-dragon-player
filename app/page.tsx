@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import chartTracks from '@/lib/chart-tracks.json';
 import { ExternalLink, Zap } from 'lucide-react';
+import { AudioVisualizer } from '@/components/audio-visualizer';
 
 type Track = { id: string; title: string; artist: string; collection: string; src: string; duration?: number; tone: string; favorite?: boolean; preview?: boolean; chartRank?: number; officialUrl?: string; artwork?: string };
 
@@ -37,11 +38,32 @@ export default function Home() {
   const [shelf, setShelf] = useState('chart');
   const [shuffle, setShuffle] = useState(false);
   const [error, setError] = useState('');
+  const [visuals, setVisuals] = useState(true);
+  const [visualError, setVisualError] = useState(false);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const shouldPlay = useRef(false);
   const objectUrls = useRef<string[]>([]);
   const audioRef = useRef<HTMLAudioElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const active = tracks[activeIndex];
+
+  const prepareAudio = async () => {
+    if (!audioRef.current) return;
+    try {
+      if (!audioContextRef.current) {
+        const context = new AudioContext(); audioContextRef.current = context;
+        const analyser = context.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = .8;
+        const source = context.createMediaElementSource(audioRef.current); sourceRef.current = source;
+        source.connect(context.destination);
+        source.connect(analyser); analyserRef.current = analyser;
+      }
+      if (audioContextRef.current.state !== 'running') await audioContextRef.current.resume();
+      setVisualError(false);
+    } catch { setVisualError(true); }
+  };
+  useEffect(() => () => { sourceRef.current?.disconnect(); analyserRef.current?.disconnect(); void audioContextRef.current?.close(); }, []);
 
   useEffect(() => { if (audioRef.current) audioRef.current.volume = volume / 100; }, [volume]);
   useEffect(() => () => objectUrls.current.forEach(url => URL.revokeObjectURL(url)), []);
@@ -62,7 +84,7 @@ export default function Home() {
     const audio = audioRef.current; if (!audio || !active.src) return;
     setError('');
     if (playing) { shouldPlay.current = false; audio.pause(); }
-    else { try { shouldPlay.current = true; await audio.play(); } catch { shouldPlay.current = false; setError('试听暂不可用，请打开官方入口，或稍后重试'); } }
+    else { try { await prepareAudio(); shouldPlay.current = true; await audio.play(); } catch { shouldPlay.current = false; setError('试听暂不可用，请打开官方入口，或稍后重试'); } }
   };
   const moveTrack = (delta: number, continuePlaying = playing) => {
     const candidates = queue.filter(track => track.src);
@@ -89,7 +111,7 @@ export default function Home() {
 
   return (
     <main className={`player-shell ${dragging ? 'is-dragging' : ''}`} onDragEnter={(e) => { e.preventDefault(); setDragging(true); }} onDragOver={(e) => e.preventDefault()} onDragLeave={(e) => { if (e.currentTarget === e.target) setDragging(false); }} onDrop={onDrop}>
-      <audio ref={audioRef} src={active.src || undefined} preload="metadata" loop={repeat} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(e) => setProgress(e.currentTarget.currentTime)} onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)} onError={() => { shouldPlay.current = false; setPlaying(false); setError('此音频暂不可用，请重试或打开官方入口'); }} onEnded={() => { if (!repeat) moveTrack(1, true); }} />
+      <audio ref={audioRef} crossOrigin="anonymous" src={active.src || undefined} preload="metadata" loop={repeat} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(e) => setProgress(e.currentTarget.currentTime)} onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)} onError={() => { shouldPlay.current = false; setPlaying(false); setError('此音频暂不可用，请重试或打开官方入口'); }} onEnded={() => { if (!repeat) moveTrack(1, true); }} />
       <img className="cinema-background" src="/bruce-lee-background.png" alt="李小龙黄色运动服武术姿态主题背景" />
       <div className="cinema-shade" aria-hidden="true" />
 
@@ -120,6 +142,10 @@ export default function Home() {
           <div className="track-title"><p>{active?.collection}</p><h1>{active?.title}</h1><span>{active?.artist}</span></div>
           <div className="track-links">{active.officialUrl && <a href={active.officialUrl} target="_blank" rel="noreferrer">{active.src ? '在 Apple Music 听完整版' : '在 Apple Music 搜索歌曲'} <ExternalLink size={12} /></a>}{active.preview && <span>{active.src ? '试听片段 · 非完整版' : '暂无试听源'}</span>}</div>
           <div className="transport">
+            <div className="visualizer-panel">
+              <div className="visualizer-heading"><span>{visualError ? '音频分析暂不可用' : playing && visuals ? 'LIVE WAVE / 实时律动' : 'SOUND IN MOTION'}</span><Button variant="ghost" size="xs" aria-pressed={visuals} onClick={() => setVisuals(value => !value)}>{visuals ? '律动 开' : '律动 关'}</Button></div>
+              <AudioVisualizer analyser={analyserRef} playing={playing} enabled={visuals && !visualError} trackId={active.id} />
+            </div>
             <div className="time-row"><span>{formatTime(progress)}</span><span>{formatTime(duration)}</span></div>
             <Slider aria-label="Track progress" disabled={!active.src || !duration} min={0} max={Math.max(duration, 1)} value={[Math.min(progress, duration || 1)]} onValueChange={(value) => { const next = Array.isArray(value) ? value[0] : value; if (duration && audioRef.current) { setProgress(next); audioRef.current.currentTime = next; } }} className="progress-slider" />
             <div className="transport-buttons"><Button variant="ghost" size="icon" aria-label="Shuffle" aria-pressed={shuffle} className={shuffle ? 'is-active' : ''} onClick={() => setShuffle(v => !v)}><Shuffle /></Button><Button variant="ghost" size="icon-lg" aria-label="Previous track" onClick={() => moveTrack(-1)}><SkipBack /></Button><Button className="main-play" disabled={!active.src} size="icon-lg" aria-label={playing ? 'Pause' : 'Play'} onClick={togglePlayback}>{playing ? <Pause /> : <Play />}</Button><Button variant="ghost" size="icon-lg" aria-label="Next track" onClick={() => moveTrack(1)}><SkipForward /></Button><Button className={repeat ? 'is-active' : ''} aria-pressed={repeat} variant="ghost" size="icon" aria-label="Repeat" onClick={() => setRepeat((value) => !value)}><Repeat2 /></Button></div>
