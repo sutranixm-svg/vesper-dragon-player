@@ -40,7 +40,10 @@ export default function Home() {
   const [error, setError] = useState('');
   const [visuals, setVisuals] = useState(true);
   const [visualError, setVisualError] = useState(false);
+  const [audioRunning, setAudioRunning] = useState(false);
+  const [analysisReset, setAnalysisReset] = useState(0);
   const analyserRef = useRef<AnalyserNode | null>(null);
+  const gainRef = useRef<GainNode | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const shouldPlay = useRef(false);
@@ -53,24 +56,26 @@ export default function Home() {
     if (!audioRef.current) return;
     try {
       if (!audioContextRef.current) {
-        const context = new AudioContext(); audioContextRef.current = context;
-        const analyser = context.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = .8;
+        const context = new AudioContext({ latencyHint:'interactive' }); audioContextRef.current = context;
+        const analyser = context.createAnalyser(); analyser.fftSize = 2048; analyser.smoothingTimeConstant = .12;
+        analyser.minDecibels = -90; analyser.maxDecibels = -10;
+        const gain = context.createGain(); gain.gain.value = volume / 100; gainRef.current = gain;
         const source = context.createMediaElementSource(audioRef.current); sourceRef.current = source;
-        source.connect(context.destination);
-        source.connect(analyser); analyserRef.current = analyser;
+        source.connect(analyser); analyser.connect(gain); gain.connect(context.destination);
+        analyserRef.current = analyser; audioRef.current.volume = 1;
       }
       if (audioContextRef.current.state !== 'running') await audioContextRef.current.resume();
       setVisualError(false);
     } catch { setVisualError(true); }
   };
-  useEffect(() => () => { sourceRef.current?.disconnect(); analyserRef.current?.disconnect(); void audioContextRef.current?.close(); }, []);
+  useEffect(() => () => { sourceRef.current?.disconnect(); analyserRef.current?.disconnect(); gainRef.current?.disconnect(); void audioContextRef.current?.close(); }, []);
 
-  useEffect(() => { if (audioRef.current) audioRef.current.volume = volume / 100; }, [volume]);
+  useEffect(() => { if (gainRef.current && audioContextRef.current) gainRef.current.gain.setTargetAtTime(volume / 100,audioContextRef.current.currentTime,.025); else if (audioRef.current) audioRef.current.volume = volume / 100; }, [volume]);
   useEffect(() => () => objectUrls.current.forEach(url => URL.revokeObjectURL(url)), []);
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.load(); setProgress(0); setDuration(0); setError(''); setPlaying(false);
+    audio.load(); setProgress(0); setDuration(0); setError(''); setPlaying(false); setAudioRunning(false);
     if (active.src && shouldPlay.current) audio.play().catch(() => { shouldPlay.current = false; setError('请点击播放重试，或打开官方入口'); });
     if (!active.src) shouldPlay.current = false;
   }, [active.id, active.src]);
@@ -111,9 +116,11 @@ export default function Home() {
 
   return (
     <main className={`player-shell ${dragging ? 'is-dragging' : ''}`} onDragEnter={(e) => { e.preventDefault(); setDragging(true); }} onDragOver={(e) => e.preventDefault()} onDragLeave={(e) => { if (e.currentTarget === e.target) setDragging(false); }} onDrop={onDrop}>
-      <audio ref={audioRef} crossOrigin="anonymous" src={active.src || undefined} preload="metadata" loop={repeat} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={(e) => setProgress(e.currentTarget.currentTime)} onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)} onError={() => { shouldPlay.current = false; setPlaying(false); setError('此音频暂不可用，请重试或打开官方入口'); }} onEnded={() => { if (!repeat) moveTrack(1, true); }} />
+      <audio ref={audioRef} crossOrigin="anonymous" src={active.src || undefined} preload="metadata" loop={repeat} onPlay={() => setPlaying(true)} onPlaying={() => setAudioRunning(true)} onWaiting={() => setAudioRunning(false)} onSeeking={() => setAudioRunning(false)} onSeeked={(e) => { setAnalysisReset(v=>v+1); setAudioRunning(!e.currentTarget.paused && e.currentTarget.readyState>=3); }} onPause={() => { setPlaying(false); setAudioRunning(false); }} onTimeUpdate={(e) => setProgress(e.currentTarget.currentTime)} onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)} onError={() => { shouldPlay.current = false; setPlaying(false); setAudioRunning(false); setError('此音频暂不可用，请重试或打开官方入口'); }} onEnded={() => { setAudioRunning(false); if (!repeat) moveTrack(1, true); }} />
       <img className="cinema-background" src="/bruce-lee-background.png" alt="李小龙黄色运动服武术姿态主题背景" />
       <div className="cinema-shade" aria-hidden="true" />
+      <div className="film-grain" aria-hidden="true" />
+      <div className="film-vignette" aria-hidden="true" />
 
       <header className="topbar glass-panel">
         <div className="brand-lockup"><span className="brand-sigil"><Zap /></span><div><strong>Vesper</strong><small>THE DRAGON EDITION</small></div></div>
@@ -138,13 +145,14 @@ export default function Home() {
 
         <section className="turntable glass-panel" aria-label="Now playing">
           <div className="turntable-head"><span>{active.chartRank ? `GLOBAL #${active.chartRank}` : 'LOCAL RECORD'}</span><span className="status"><i className={playing ? 'live' : ''} /> {playing ? 'PLAYING' : 'PAUSED'}</span><button aria-label="收藏歌曲" aria-pressed={!!active.favorite} onClick={() => setTracks(current => current.map(track => track.id === active.id ? { ...track, favorite: !track.favorite } : track))}><Heart fill={active.favorite ? 'currentColor' : 'none'} /></button></div>
-          <div className="deck"><div className="record-plinth"><div className={`vinyl ${playing ? 'spinning' : ''}`}><div className="vinyl-grooves" /><div className="record-label" style={{ '--tone': active?.tone } as React.CSSProperties}><Crown /><span>VESPER</span><small>{active?.collection}</small></div></div><div className={`tonearm ${playing ? 'engaged' : ''}`} aria-hidden="true"><i /><span /></div><span className="deck-screw s1" /><span className="deck-screw s2" /><span className="deck-screw s3" /><span className="deck-screw s4" /></div></div>
+          <div className="deck"><div className="record-plinth"><div className={`vinyl ${audioRunning ? 'spinning' : ''}`}><div className="vinyl-grooves" /><div className="record-label" style={{ '--tone': active?.tone } as React.CSSProperties}><Crown /><span>VESPER</span><small>{active?.collection}</small></div></div><div className={`tonearm ${playing ? 'engaged' : ''}`} aria-hidden="true"><i /><span /></div><span className="deck-screw s1" /><span className="deck-screw s2" /><span className="deck-screw s3" /><span className="deck-screw s4" /></div></div>
           <div className="track-title"><p>{active?.collection}</p><h1>{active?.title}</h1><span>{active?.artist}</span></div>
           <div className="track-links">{active.officialUrl && <a href={active.officialUrl} target="_blank" rel="noreferrer">{active.src ? '在 Apple Music 听完整版' : '在 Apple Music 搜索歌曲'} <ExternalLink size={12} /></a>}{active.preview && <span>{active.src ? '试听片段 · 非完整版' : '暂无试听源'}</span>}</div>
           <div className="transport">
             <div className="visualizer-panel">
-              <div className="visualizer-heading"><span>{visualError ? '音频分析暂不可用' : playing && visuals ? 'LIVE WAVE / 实时律动' : 'SOUND IN MOTION'}</span><Button variant="ghost" size="xs" aria-pressed={visuals} onClick={() => setVisuals(value => !value)}>{visuals ? '律动 开' : '律动 关'}</Button></div>
-              <AudioVisualizer analyser={analyserRef} playing={playing} enabled={visuals && !visualError} trackId={active.id} />
+              <div className="visualizer-heading"><span>{visualError ? '音频分析暂不可用' : audioRunning && visuals ? 'LIVE / 音频驱动' : playing ? '等待音频信号' : 'SOUND IN MOTION'}</span><Button variant="ghost" size="xs" aria-pressed={visuals} onClick={() => setVisuals(value => !value)}>{visuals ? '律动 开' : '律动 关'}</Button></div>
+              <AudioVisualizer analyser={analyserRef} playing={audioRunning} enabled={visuals && !visualError} trackId={active.id} resetKey={analysisReset} />
+              <div className="visualizer-legend"><span>频谱 · 实时声波</span><span><i /> 低频重拍</span></div>
             </div>
             <div className="time-row"><span>{formatTime(progress)}</span><span>{formatTime(duration)}</span></div>
             <Slider aria-label="Track progress" disabled={!active.src || !duration} min={0} max={Math.max(duration, 1)} value={[Math.min(progress, duration || 1)]} onValueChange={(value) => { const next = Array.isArray(value) ? value[0] : value; if (duration && audioRef.current) { setProgress(next); audioRef.current.currentTime = next; } }} className="progress-slider" />
@@ -155,7 +163,7 @@ export default function Home() {
 
         <aside className="queue glass-panel">
           <div className="queue-header"><div><span>{shelf === 'chart' ? 'Global English' : shelf === 'favorites' ? '我的收藏' : shelf === 'local' ? '本地与原创' : '全部音乐'}</span><small>{queue.length} TRACKS · {shelf === 'chart' ? '2026.10.17' : 'YOUR LIBRARY'}</small></div><ListMusic size={17} /></div>
-          <div className="queue-list">{queue.map((track) => <button key={track.id} className={track.index === activeIndex ? 'active' : ''} onClick={() => selectTrack(track.index)}><span className="queue-index">{track.index === activeIndex && playing ? <i className="equalizer"><b /><b /><b /></i> : track.chartRank ? `#${track.chartRank}` : '•'}</span><span className="queue-cover" style={{ '--tone': track.tone } as React.CSSProperties}>{track.artwork ? <img src={track.artwork} alt="" loading="lazy" /> : <Disc3 />}</span><span className="queue-copy"><strong>{track.title}</strong><small>{track.artist}</small></span><span className="queue-time">{track.preview ? track.src ? '试听' : '外链' : '本地'}</span></button>)}{!queue.length && <p className="empty-list">{query ? '没有找到匹配歌曲' : '这里还没有歌曲'}</p>}</div>
+          <div className="queue-list">{queue.map((track) => <button key={track.id} className={track.index === activeIndex ? 'active' : ''} onClick={() => selectTrack(track.index)}><span className="queue-index">{track.index === activeIndex && playing ? <span className="now-playing-dot" aria-label="正在播放" /> : track.chartRank ? `#${track.chartRank}` : '•'}</span><span className="queue-cover" style={{ '--tone': track.tone } as React.CSSProperties}>{track.artwork ? <img src={track.artwork} alt="" loading="lazy" /> : <Disc3 />}</span><span className="queue-copy"><strong>{track.title}</strong><small>{track.artist}</small></span><span className="queue-time">{track.preview ? track.src ? '试听' : '外链' : '本地'}</span></button>)}{!queue.length && <p className="empty-list">{query ? '没有找到匹配歌曲' : '这里还没有歌曲'}</p>}</div>
           <div className="sound-panel"><div className="sound-title"><span><Volume2 /> Chamber volume</span><strong>{volume}</strong></div><Slider aria-label="Volume" min={0} max={100} value={[volume]} onValueChange={(value) => setVolume(Array.isArray(value) ? value[0] : value)} className="volume-slider" /><div className="sound-meta"><span>QUIET</span><span>GRAND HALL</span></div></div>
         </aside>
       </div>
