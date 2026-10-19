@@ -146,8 +146,10 @@ export default function Home() {
         <section className="turntable glass-panel" aria-label="Now playing">
           <div className="turntable-head"><span>{active.chartRank ? `GLOBAL #${active.chartRank}` : 'LOCAL RECORD'}</span><span className="status"><i className={playing ? 'live' : ''} /> {playing ? 'PLAYING' : 'PAUSED'}</span><button aria-label="收藏歌曲" aria-pressed={!!active.favorite} onClick={() => setTracks(current => current.map(track => track.id === active.id ? { ...track, favorite: !track.favorite } : track))}><Heart fill={active.favorite ? 'currentColor' : 'none'} /></button></div>
           <div className="deck"><div className="record-plinth"><div className={`vinyl ${audioRunning ? 'spinning' : ''}`}><div className="vinyl-grooves" /><div className="record-label" style={{ '--tone': active?.tone } as React.CSSProperties}><Crown /><span>VESPER</span><small>{active?.collection}</small></div></div><div className={`tonearm ${playing ? 'engaged' : ''}`} aria-hidden="true"><i /><span /></div><span className="deck-screw s1" /><span className="deck-screw s2" /><span className="deck-screw s3" /><span className="deck-screw s4" /></div></div>
-          <div className="track-title"><p>{active?.collection}</p><h1>{active?.title}</h1><span>{active?.artist}</span></div>
-          <div className="track-links">{active.officialUrl && <a href={active.officialUrl} target="_blank" rel="noreferrer">{active.src ? '在 Apple Music 听完整版' : '在 Apple Music 搜索歌曲'} <ExternalLink size={12} /></a>}{active.preview && <span>{active.src ? '试听片段 · 非完整版' : '暂无试听源'}</span>}</div>
+          <div className="now-playing-copy">
+            <div className="track-title"><p>{active?.collection}</p><h1>{active?.title}</h1><span>{active?.artist}</span></div>
+            <div className="track-links">{active.officialUrl && <a href={active.officialUrl} target="_blank" rel="noreferrer">{active.src ? '在 Apple Music 听完整版' : '在 Apple Music 搜索歌曲'} <ExternalLink size={12} /></a>}{active.preview && <span>{active.src ? '试听片段 · 非完整版' : '暂无试听源'}</span>}</div>
+          </div>
           <div className="transport">
             <div className="visualizer-panel">
               <div className="visualizer-heading"><span>{visualError ? '音频分析暂不可用' : audioRunning && visuals ? 'LIVE / 音频驱动' : playing ? '等待音频信号' : 'SOUND IN MOTION'}</span><Button variant="ghost" size="xs" aria-pressed={visuals} onClick={() => setVisuals(value => !value)}>{visuals ? '律动 开' : '律动 关'}</Button></div>
