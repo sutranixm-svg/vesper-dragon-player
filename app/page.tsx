@@ -1,7 +1,7 @@
 'use client';
 
 import {
-  Crown, Disc3, FileAudio, Heart, ListMusic,
+  ChevronLeft, ChevronRight, Crown, Disc3, FileAudio, Heart, ListMusic,
   Pause, Play, Plus, Repeat2, Search, Shuffle,
   SkipBack, SkipForward, Upload, Volume2,
 } from 'lucide-react';
@@ -20,6 +20,8 @@ const demoTracks: Track[] = [
   { id: 'rose', title: 'The Last Rose of Rouen', artist: 'Morrow & Vale', collection: 'Reliquary II', src: '/audio/last-rose-of-rouen.wav', tone: '#6e4d26' },
 ];
 
+const QUEUE_PAGE_SIZE = 5;
+
 const formatTime = (seconds: number) => {
   if (!Number.isFinite(seconds)) return '0:00';
   return `${Math.floor(seconds / 60)}:${Math.floor(seconds % 60).toString().padStart(2, '0')}`;
@@ -36,6 +38,7 @@ export default function Home() {
   const [dragging, setDragging] = useState(false);
   const [query, setQuery] = useState('');
   const [shelf, setShelf] = useState('chart');
+  const [queuePage, setQueuePage] = useState(0);
   const [shuffle, setShuffle] = useState(false);
   const [error, setError] = useState('');
   const [visuals, setVisuals] = useState(true);
@@ -84,6 +87,14 @@ export default function Home() {
     (shelf === 'all' || (shelf === 'chart' && track.preview) || (shelf === 'favorites' && track.favorite) || (shelf === 'local' && !track.preview)) &&
     `${track.title} ${track.artist}`.toLowerCase().includes(query.toLowerCase())
   ), [tracks, shelf, query]);
+  const queuePageCount = Math.max(1, Math.ceil(queue.length / QUEUE_PAGE_SIZE));
+  const visibleQueue = queue.slice(queuePage * QUEUE_PAGE_SIZE, (queuePage + 1) * QUEUE_PAGE_SIZE);
+  useEffect(() => setQueuePage(0), [shelf, query]);
+  useEffect(() => {
+    const activePosition = queue.findIndex(track => track.index === activeIndex);
+    if (activePosition >= 0) setQueuePage(Math.floor(activePosition / QUEUE_PAGE_SIZE));
+    else setQueuePage(page => Math.min(page, queuePageCount - 1));
+  }, [activeIndex, queue, queuePageCount]);
   const selectTrack = (index: number) => { shouldPlay.current = playing; setActiveIndex(index); };
   const togglePlayback = async () => {
     const audio = audioRef.current; if (!audio || !active.src) return;
@@ -165,7 +176,8 @@ export default function Home() {
 
         <aside className="queue glass-panel">
           <div className="queue-header"><div><span>{shelf === 'chart' ? 'Global English' : shelf === 'favorites' ? '我的收藏' : shelf === 'local' ? '本地与原创' : '全部音乐'}</span><small>{queue.length} TRACKS · {shelf === 'chart' ? '2026.10.17' : 'YOUR LIBRARY'}</small></div><ListMusic size={17} /></div>
-          <div className="queue-list">{queue.map((track) => <button key={track.id} className={track.index === activeIndex ? 'active' : ''} onClick={() => selectTrack(track.index)}><span className="queue-index">{track.index === activeIndex && playing ? <span className="now-playing-dot" aria-label="正在播放" /> : track.chartRank ? `#${track.chartRank}` : '•'}</span><span className="queue-cover" style={{ '--tone': track.tone } as React.CSSProperties}>{track.artwork ? <img src={track.artwork} alt="" loading="lazy" /> : <Disc3 />}</span><span className="queue-copy"><strong>{track.title}</strong><small>{track.artist}</small></span><span className="queue-time">{track.preview ? track.src ? '试听' : '外链' : '本地'}</span></button>)}{!queue.length && <p className="empty-list">{query ? '没有找到匹配歌曲' : '这里还没有歌曲'}</p>}</div>
+          <div className="queue-list">{visibleQueue.map((track) => <button key={track.id} className={track.index === activeIndex ? 'active' : ''} onClick={() => selectTrack(track.index)}><span className="queue-index">{track.index === activeIndex && playing ? <span className="now-playing-dot" aria-label="正在播放" /> : track.chartRank ? `#${track.chartRank}` : '•'}</span><span className="queue-cover" style={{ '--tone': track.tone } as React.CSSProperties}>{track.artwork ? <img src={track.artwork} alt="" loading="lazy" /> : <Disc3 />}</span><span className="queue-copy"><strong>{track.title}</strong><small>{track.artist}</small></span><span className="queue-time">{track.preview ? track.src ? '试听' : '外链' : '本地'}</span></button>)}{!queue.length && <p className="empty-list">{query ? '没有找到匹配歌曲' : '这里还没有歌曲'}</p>}</div>
+          {queue.length > QUEUE_PAGE_SIZE && <div className="queue-pager" aria-label="歌单分页"><button aria-label="上一页" disabled={queuePage === 0} onClick={() => setQueuePage(page => Math.max(0, page - 1))}><ChevronLeft /></button><span><strong>{queuePage + 1}</strong> / {queuePageCount}</span><button aria-label="下一页" disabled={queuePage >= queuePageCount - 1} onClick={() => setQueuePage(page => Math.min(queuePageCount - 1, page + 1))}><ChevronRight /></button></div>}
           <div className="sound-panel"><div className="sound-title"><span><Volume2 /> Chamber volume</span><strong>{volume}</strong></div><Slider aria-label="Volume" min={0} max={100} value={[volume]} onValueChange={(value) => setVolume(Array.isArray(value) ? value[0] : value)} className="volume-slider" /><div className="sound-meta"><span>QUIET</span><span>GRAND HALL</span></div></div>
         </aside>
       </div>

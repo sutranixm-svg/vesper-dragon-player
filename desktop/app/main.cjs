@@ -16,7 +16,7 @@ async function openExternal(value) {
 }
 async function createWindow() {
   mainWindow = new BrowserWindow({
-    title: 'Vesper · 黑胶音乐播放器', width: 1380, height: 960, minWidth: 360, minHeight: 600,
+    title: 'Vesper · 黑胶音乐播放器', width: 1380, height: 960, minWidth: 900, minHeight: 600,
     backgroundColor: '#080808', show: false, autoHideMenuBar: true,
     icon: path.join(__dirname, 'icon.png'),
     webPreferences: { nodeIntegration: false, contextIsolation: true, sandbox: true, webSecurity: true, devTools: !app.isPackaged, backgroundThrottling: !selfTest },
