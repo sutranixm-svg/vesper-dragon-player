@@ -4,6 +4,8 @@
 
 [在线使用](https://vesper-obsidian-player.hajybdalstarthmanylm.chatgpt.site/)
 
+[下载 Windows 软件](https://github.com/sutranixm-svg/vesper-dragon-player/releases/latest) · [桌面版说明](desktop/README.md)
+
 ## 功能
 
 - 20 首榜单曲目的 Apple Music 官方试听、官方完整版入口。

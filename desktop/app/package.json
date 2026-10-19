@@ -1,0 +1,9 @@
+{
+  "name": "vesper-dragon-player",
+  "productName": "Vesper",
+  "version": "1.0.0",
+  "description": "玻璃黑胶音乐播放器 · The Dragon Edition",
+  "author": "sutranixm-svg",
+  "private": true,
+  "main": "main.cjs"
+}

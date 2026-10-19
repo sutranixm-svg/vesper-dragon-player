@@ -1,0 +1,26 @@
+{
+  "appId": "com.vesper.dragonplayer",
+  "productName": "Vesper",
+  "directories": { "app": "desktop/app", "output": "release", "buildResources": "desktop/assets" },
+  "files": ["main.cjs", "security.cjs", "self-test.cjs", "package.json", "icon.png", "renderer/**/*", "!node_modules/**/*"],
+  "asar": true,
+  "npmRebuild": false,
+  "win": {
+    "target": [{ "target": "nsis", "arch": ["x64"] }, { "target": "portable", "arch": ["x64"] }],
+    "icon": "desktop/assets/icon.ico",
+    "artifactName": "Vesper-${version}-Windows-${arch}-Setup.${ext}"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "runAfterFinish": false,
+    "deleteAppDataOnUninstall": false,
+    "installerLanguages": ["zh_CN", "en_US"],
+    "language": "2052"
+  },
+  "portable": { "artifactName": "Vesper-${version}-Windows-${arch}-Portable.${ext}" },
+  "publish": null
+}
