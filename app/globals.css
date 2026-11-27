@@ -99,6 +99,29 @@ html{color-scheme:dark;scroll-behavior:smooth}body{overflow-x:clip}button,a,inpu
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.vinyl,.vinyl.spinning{animation:none}.tonearm{transition:none}.film-grain{opacity:.03}}
 .queue-pager{display:flex;align-items:center;justify-content:center;gap:12px;min-height:40px;color:#a99b78;font:9px var(--font-mono);letter-spacing:.12em}.queue-pager button{width:36px;height:36px;display:grid;place-items:center;border:1px solid #e9c66324;border-radius:50%;background:#ffffff05;color:#dfc67f;cursor:pointer}.queue-pager button:hover:not(:disabled){border-color:#e9c66370;background:#e9c66310}.queue-pager button:disabled{opacity:.28;cursor:default}.queue-pager svg{width:15px}.queue-pager strong{color:#f0d998;font-weight:600}
 
+/* Playback pass: the record is a play surface, sliders are easier to grab, and phones keep volume with the transport. */
+button.record-plinth{padding:0;color:inherit;font:inherit;cursor:pointer}.record-plinth:active{transform:scale(.985)}
+.progress-slider [data-slot="slider-thumb"],.volume-slider [data-slot="slider-thumb"]{width:14px;height:14px}
+.progress-slider [data-slot="slider-thumb"]::after,.volume-slider [data-slot="slider-thumb"]::after{inset:-12px}
+.transport-volume{display:none}
+@media(max-width:720px){
+  .transport{display:flex;flex-direction:column}
+  .transport-buttons{order:1;margin:0 0 8px}
+  .time-row{order:2}
+  .progress-slider{order:3;min-height:44px;display:flex;align-items:center}
+  .transport-volume{order:4;display:grid;grid-template-columns:18px minmax(0,1fr) 28px;align-items:center;gap:8px;margin:0 0 8px;color:#cbb98a}
+  .transport-volume svg{width:16px;height:16px}
+  .transport-volume strong{font:11px var(--font-mono);color:var(--gold-pale);text-align:right}
+  .transport-volume .volume-slider{min-height:44px;display:flex;align-items:center}
+  .visualizer-panel{order:5}
+  .playback-message{order:6}
+  .queue .sound-panel{display:none}
+  .queue-pager button{width:44px;height:44px}
+  .deck,.turntable:has(.visualizer-panel) .deck{padding:8px 0 12px}
+  .track-links{margin-top:4px}
+}
+@media(prefers-reduced-motion:reduce){.record-plinth:active{transform:none}}
+
 /* Desktop listening console: keep the record and every playback control in the first view. */
 @media(min-width:901px){
   html,body{height:100%;overflow:hidden}

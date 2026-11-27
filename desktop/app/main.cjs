@@ -59,7 +59,7 @@ else {
       { label: '视图', submenu: [{ role: 'resetZoom', label: '实际大小' }, { role: 'zoomIn', label: '放大' }, { role: 'zoomOut', label: '缩小' }, { type: 'separator' }, { role: 'togglefullscreen', label: '全屏' }] },
       { label: '帮助', submenu: [
         { label: '下载更新', click: () => void openExternal('https://github.com/sutranixm-svg/vesper-dragon-player/releases') },
-        { label: '关于 Vesper', click: () => void dialog.showMessageBox(mainWindow, { type: 'info', title: 'Vesper', message: `Vesper ${app.getVersion()} · The Dragon Edition`, detail: '本地音频可离线播放；榜单试听需要联网。\n导入的文件不会上传，关闭软件后需重新选择。\nAlt 键显示菜单。' }) },
+        { label: '关于 Vesper', click: () => void dialog.showMessageBox(mainWindow, { type: 'info', title: 'Vesper', message: `Vesper ${app.getVersion()} · The Dragon Edition`, detail: '本地音频可离线播放；榜单试听需要联网。\n导入的文件不会上传，关闭软件后需重新选择。\n音量、循环、随机和示例收藏会留在这台电脑上。\n空格播放或暂停，左右方向键进退 5 秒，上下方向键调节音量。\nAlt 键显示菜单。' }) },
       ] },
     ]));
     await createWindow();
